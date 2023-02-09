@@ -28,8 +28,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.GridLayoutManager
 import com.example.android.trackmysleepquality.R
-import com.example.android.trackmysleepquality.SleepNightAdapter
-import com.example.android.trackmysleepquality.SleepNightListener
 import com.example.android.trackmysleepquality.database.SleepDatabase
 import com.example.android.trackmysleepquality.databinding.FragmentSleepTrackerBinding
 import com.google.android.material.snackbar.Snackbar
@@ -66,16 +64,22 @@ class SleepTrackerFragment : Fragment() {
         binding.lifecycleOwner= viewLifecycleOwner
 
         val adapter= SleepNightAdapter(SleepNightListener {
-            nightId -> Toast.makeText(activity, "$nightId", Toast.LENGTH_LONG).show()
+            nightId -> viewModel.onSleepNightClicked(nightId)
         })
         binding.sleepList.adapter= adapter
 
         val layoutManager= GridLayoutManager(activity, 3)
+        layoutManager.spanSizeLookup= object: GridLayoutManager.SpanSizeLookup() {
+            override fun getSpanSize(position: Int)= when(position) {
+                0 -> 3
+                else -> 1
+            }
+        }
         binding.sleepList.layoutManager= layoutManager
 
         viewModel.nights.observe(viewLifecycleOwner, Observer {
             it?.let {
-                adapter.submitList(it)
+                adapter.addHeaderAndSubmitList(it)
             }
         })
 
@@ -96,6 +100,15 @@ class SleepTrackerFragment : Fragment() {
                     .show()
 
                 viewModel.doneShowingSnackBar()
+            }
+        })
+
+        viewModel.navigateToSleepDataQuality.observe(viewLifecycleOwner, Observer { nightId ->
+            nightId?.let {
+                this.findNavController()
+                    .navigate(SleepTrackerFragmentDirections
+                        .actionSleepTrackerFragmentToSleepDetailFragment(nightId))
+                viewModel.onSleepDataQualityNavigated()
             }
         })
 
